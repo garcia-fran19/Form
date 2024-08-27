@@ -1,0 +1,64 @@
+﻿@page "/usuarios"
+@using Form.Data
+@using Form.Models
+@using Form.Shared
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext _context
+
+<div>
+    <UsuarioComponent TItem="Usuario" Usuarios="usuarios" Roles="roles" OnEdit="ActualizarUsuario" OnAdd="AñadirUsuario" OnDelete="EliminarUsuario" />
+</div><!-- a través de UsuarioComponent, se pasa la lista con los usuarios y los roles a Usuarios -->
+@code {
+    private List<Usuario> usuarios = new List<Usuario>();
+    private List<Rol> roles = new List<Rol>();  // Cargar los roles
+
+    protected override async Task OnInitializedAsync()
+    {
+        usuarios = await GetUsuariosAsync();
+        roles = await GetRolesAsync();  // Cargar los roles desde la base de datos
+    }
+
+    private async Task<List<Usuario>> GetUsuariosAsync()
+    {
+        return await _context.Usuarios.Include(u => u.Rol).ToListAsync();
+        // Este método carga la lista de usuarios con los roles asociados
+    }
+
+    private async Task<List<Rol>> GetRolesAsync()
+    {
+        return await _context.Roles.ToListAsync();
+        // Este método carga la lista de roles desde la base de datos
+    }
+
+    private async Task ActualizarUsuario(Usuario usuarioActualizado)
+    {
+        var usuario = await _context.Usuarios.FindAsync(usuarioActualizado.Id);
+        if (usuario != null)
+        {
+            usuario.Nombre = usuarioActualizado.Nombre;
+            usuario.Edad = usuarioActualizado.Edad;
+            usuario.RolId = usuarioActualizado.RolId;  // Actualizar el rol
+            await _context.SaveChangesAsync();
+        }
+
+        usuarios = await GetUsuariosAsync();
+    }
+
+    private async Task AñadirUsuario(Usuario nuevoUsuario)
+    {
+        _context.Usuarios.Add(nuevoUsuario);
+        await _context.SaveChangesAsync();
+    }
+
+    private async Task EliminarUsuario(int id)
+    {
+        var usuario = await _context.Usuarios.FindAsync(id);
+        if (usuario != null)
+        {
+            _context.Usuarios.Remove(usuario);
+            await _context.SaveChangesAsync();
+        }
+
+        usuarios = await GetUsuariosAsync();
+    }
+}

@@ -1,0 +1,119 @@
+﻿@page "/"
+@using Form.Data
+@using Form.Models
+@using Form.Shared
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext _context
+
+<h3>Gestión de Usuarios</h3>
+<div class="mb-10 mt-4">
+    <UsuarioComponent TItem="Usuario" Usuarios="usuarios" Roles="roles" OnEdit="ActualizarUsuario" OnAdd="AñadirUsuario" OnDelete="EliminarUsuario" />
+</div>
+
+<h3>Gestión de Roles</h3>
+<div class="mt-4">
+    <RolComponent TItem="Rol" Roles="roles" OnEdit="ActualizarRol" OnAdd="AñadirRol" OnDelete="EliminarRol" />
+</div>
+
+@code {
+    
+    private List<Usuario> usuarios = new List<Usuario>();
+    
+    
+    private List<Rol> roles = new List<Rol>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        usuarios = await GetUsuariosAsync();
+        roles = await GetRolesAsync();
+    }
+
+    private async Task<List<Usuario>> GetUsuariosAsync()
+    {
+        return await _context.Usuarios
+            .Include(u => u.Rol) // Incluir la propiedad de navegación Rol
+            .Select(u => new Usuario
+                {
+                    Id = u.Id,
+                    Nombre = u.Nombre,
+                    Edad = u.Edad,
+                    RolId = u.RolId,  // Mantener RolId nullable
+                    Rol = u.Rol != null ? u.Rol : null  // Asignar Rol solo si no es null
+                })
+            .ToListAsync();
+    }
+
+
+    private async Task ActualizarUsuario(Usuario usuarioActualizado)
+    {
+        var usuario = await _context.Usuarios.FindAsync(usuarioActualizado.Id);
+        if (usuario != null)
+        {
+            usuario.Nombre = usuarioActualizado.Nombre;
+            usuario.Edad = usuarioActualizado.Edad;
+            usuario.RolId = usuarioActualizado.RolId;
+            await _context.SaveChangesAsync();
+        }
+
+        // Recargar la lista después de la actualización
+        usuarios = await GetUsuariosAsync();
+    }
+
+
+    private async Task AñadirUsuario(Usuario nuevoUsuario)
+    {
+        _context.Usuarios.Add(nuevoUsuario);
+        await _context.SaveChangesAsync();
+
+        // No recargar la lista aquí para permitir la edición directa
+    }
+
+    private async Task EliminarUsuario(int id)
+    {
+        var usuario = await _context.Usuarios.FindAsync(id);
+        if (usuario != null)
+        {
+            _context.Usuarios.Remove(usuario);
+            await _context.SaveChangesAsync();
+        }
+
+        // Recargar la lista después de eliminar
+        usuarios = await GetUsuariosAsync();
+    }
+
+    private async Task<List<Rol>> GetRolesAsync()
+    {
+        return await _context.Roles.ToListAsync(); 
+    }
+
+    private async Task ActualizarRol(Rol rolActualizado)
+    {
+        var rol = await _context.Roles.FindAsync(rolActualizado.Id);
+        if (rol != null)
+        {
+            rol.Nombre = rolActualizado.Nombre;
+            rol.Descripcion = rolActualizado.Descripcion;
+            await _context.SaveChangesAsync();
+        }
+
+        roles = await GetRolesAsync();
+    }
+
+    private async Task AñadirRol(Rol nuevoRol)
+    {
+        _context.Roles.Add(nuevoRol);
+        await _context.SaveChangesAsync();
+    }
+
+    private async Task EliminarRol(int id)
+    {
+        var rol = await _context.Roles.FindAsync(id);
+        if (rol != null)
+        {
+            _context.Roles.Remove(rol);
+            await _context.SaveChangesAsync();
+        }
+
+        roles = await GetRolesAsync();
+    }
+}

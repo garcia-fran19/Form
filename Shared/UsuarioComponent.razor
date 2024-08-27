@@ -1,0 +1,178 @@
+﻿@typeparam TItem
+@using MudBlazor
+@using Form.Models
+
+
+<!-- Tabla de usuarios -->
+<MudDataGrid Class="mr-50" Items="@Usuarios">@*la tabla recorre cada elemento presente en la lista Usuarios (su fila) y lo vuelca el titulo de la columna se establece en Title*@
+    <Columns>
+        <PropertyColumn Property="x => x.Id" Title="ID" />
+        <PropertyColumn Property="x => x.Nombre" Title="Nombre" />
+        <PropertyColumn Property="x => x.Edad" Title="Edad" />
+        <TemplateColumn Title="Rol" CellClass="d-flex justify-end"> @*aqui en vez de establecerse en property el valor, lo hace a traves de un condicional*@
+            <CellTemplate>
+                @if (context.Item.Rol != null)
+                {
+                    @context.Item.Rol.Nombre
+                }
+                else
+                {
+                    <em>Sin Rol</em> <!-- Mostrar un texto alternativo si el Rol es null -->
+                }
+            </CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn CellClass="d-flex justify-end">
+            <CellTemplate>
+                @if (usuarioEditando != null && context.Item.Id == usuarioEditando.Id)
+                {
+                    <!-- Modo Edición -->
+                    <MudStack Row>
+                        <MudTextField @bind-Value="usuarioEditando.Id" Label="ID" Disabled="true" />
+                        <MudTextField @bind-Value="usuarioEditando.Nombre" Label="Nombre" />
+                        <MudTextField @bind-Value="usuarioEditando.Edad" Label="Edad" />
+                        <MudSelect @bind-Value="usuarioEditando.RolId" Label="Rol">@*muestra un selector de opciones, el valor seleccionado es el asignado al atributo RolId*@
+                            @if (usuarioEditando.RolId == null)@*si es null establece el valor null en el selector*@
+                            {
+                                <MudSelectItem Value="@(null as int?)">Sin Rol</MudSelectItem>
+                            }
+                            @foreach (var rol in Roles)  @*en todo caso recorre los roles para mostrarlos como opciones del selector*@
+                            {
+                                <MudSelectItem Value="@(rol.Id as int?)">@rol.Nombre</MudSelectItem>
+                            }
+                        </MudSelect>
+                        <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" OnClick="GuardarCambios">Guardar</MudButton>
+                        <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Secondary" OnClick="CancelarEdicion">Cancelar</MudButton>
+                    </MudStack>
+                }
+                else if (nuevoUsuario != null && context.Item == nuevoUsuario)
+                {
+                    <!-- Modo Añadir -->
+                    <MudStack Row>
+                        <MudTextField @bind-Value="nuevoUsuario.Id" Label="ID" Disabled="true" />
+                        <MudTextField @bind-Value="nuevoUsuario.Nombre" Label="Nombre" />
+                        <MudTextField @bind-Value="nuevoUsuario.Edad" Label="Edad" />
+                            <MudSelect @bind-Value="nuevoUsuario.RolId" Label="Rol">
+                                <MudSelectItem Value="@(null as int?)">Sin Rol</MudSelectItem>
+                                @foreach (var rol in Roles)
+                                {
+                                    <MudSelectItem Value="@(rol.Id as int?)">@rol.Nombre</MudSelectItem>
+                                }
+                            </MudSelect>
+                        <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" OnClick="AgregarNuevoUsuario">Agregar</MudButton>
+                        <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Secondary" OnClick="CancelarNuevoUsuario">Cancelar</MudButton>
+                    </MudStack>
+                }
+                else
+                {
+                    <!-- Modo Normal -->
+                    <MudStack Row>
+                        <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Info" OnClick="() => EditarUsuario(context.Item)">
+                            Editar
+                        </MudButton>
+                        <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Error" OnClick="@(async () => await EliminarUsuario(context.Item))">
+                            Eliminar
+                        </MudButton>
+                    </MudStack>
+                }
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid>
+
+
+<!-- Botón Añadir -->
+<MudButton Class="mt-7" Variant="Variant.Filled" Color="Color.Primary" OnClick="IniciarNuevoUsuario">Añadir Usuario</MudButton>
+
+@code {
+    [Parameter]
+    public List<Usuario> Usuarios { get; set; }
+
+    [Parameter]
+    public List<Rol> Roles { get; set; }
+
+    [Parameter]
+    public EventCallback<Usuario> OnEdit { get; set; }
+
+    [Parameter]
+    public EventCallback<Usuario> OnAdd { get; set; }
+
+    [Parameter]
+    public EventCallback<int> OnDelete { get; set; }
+
+    private Usuario usuarioEditando;
+    private Usuario nuevoUsuario;
+
+    private void IniciarNuevoUsuario()
+    {
+        int nuevoId = Usuarios.Any() ? Usuarios.Max(u => u.Id) + 1 : 1;
+
+        nuevoUsuario = new Usuario
+            {
+                Id = nuevoId,
+                RolId = 1  // Ejemplo: Asignar un valor predeterminado a RolId
+            };
+
+        Usuarios.Add(nuevoUsuario);
+
+        // Forzar la actualización inmediata de la UI
+        StateHasChanged();
+    }
+
+    private void CancelarNuevoUsuario()
+    {
+        Usuarios.Remove(nuevoUsuario);
+        nuevoUsuario = null;
+        StateHasChanged();
+    }
+
+    private async Task AgregarNuevoUsuario()
+    {
+        if (OnAdd.HasDelegate)
+        {
+            await OnAdd.InvokeAsync(nuevoUsuario);
+        }
+
+        nuevoUsuario = null;
+        StateHasChanged();
+    }
+
+    private void EditarUsuario(Usuario usuario)
+    {
+        usuarioEditando = new Usuario
+            {
+                Id = usuario.Id,
+                Nombre = usuario.Nombre,
+                Edad = usuario.Edad,
+                RolId = usuario.RolId // Puede ser null
+            };
+
+        StateHasChanged();
+    }
+
+    private void CancelarEdicion()
+    {
+        usuarioEditando = null;
+        StateHasChanged();
+    }
+
+    private async Task GuardarCambios()
+    {
+        if (OnEdit.HasDelegate)
+        {
+            await OnEdit.InvokeAsync(usuarioEditando);
+        }
+
+        usuarioEditando = null;
+        StateHasChanged();
+    }
+
+    private async Task EliminarUsuario(Usuario usuario)
+    {
+        if (OnDelete.HasDelegate)
+        {
+            await OnDelete.InvokeAsync(usuario.Id);
+        }
+
+        Usuarios.Remove(usuario);
+    }
+}

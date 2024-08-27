@@ -1,0 +1,149 @@
+﻿@typeparam TItem
+@using MudBlazor
+@using Form.Models
+
+
+
+<!-- Tabla de roles -->
+<MudDataGrid Items="@Roles">
+    <Columns>
+        <PropertyColumn Property="x => x.Id" Title="ID" />
+        <PropertyColumn Property="x => x.Nombre" Title="Nombre" />
+        <PropertyColumn Property="x => x.Descripcion" Title="Descripción" />
+        <TemplateColumn CellClass="d-flex justify-end">
+            <CellTemplate>
+                @if (rolEditando != null && context.Item.Id == rolEditando.Id)
+                {
+                    <!-- Modo Edición -->
+                    <MudStack Row>
+                        <MudTextField @bind-Value="rolEditando.Id" Label="ID" Disabled="true" />
+                        <MudTextField @bind-Value="rolEditando.Nombre" Label="Nombre" />
+                        <MudTextField @bind-Value="rolEditando.Descripcion" Label="Descripción" />
+                        <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" OnClick="GuardarCambios">Guardar</MudButton>
+                        <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Secondary" OnClick="CancelarEdicion">Cancelar</MudButton>
+                    </MudStack>
+                }
+                else if (nuevoRol != null && context.Item == nuevoRol)
+                {
+                    <!-- Modo Añadir -->
+                    <MudStack Row>
+                        <MudTextField @bind-Value="nuevoRol.Id" Label="ID" Disabled="true" />
+                        <MudTextField @bind-Value="nuevoRol.Nombre" Label="Nombre" />
+                        <MudTextField @bind-Value="nuevoRol.Descripcion" Label="Descripción" />
+                        <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" OnClick="AgregarNuevoRol">Agregar</MudButton>
+                        <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Secondary" OnClick="CancelarNuevoRol">Cancelar</MudButton>
+                    </MudStack>
+                }
+                else
+                {
+                    <!-- Modo Normal -->
+                    <MudStack Row>
+                        <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Info" OnClick="() => EditarRol(context.Item)">
+                            Editar
+                        </MudButton>
+                        <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Error" OnClick="@(async () => await EliminarRol(context.Item))">
+                            Eliminar
+                        </MudButton>
+                    </MudStack>
+                }
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid>
+
+
+<!-- Botón Añadir -->
+<MudButton Class="mt-7" Variant="Variant.Filled" Color="Color.Primary" OnClick="IniciarNuevoRol">Añadir Rol</MudButton>
+@code {
+    [Parameter]
+    public List<Rol> Roles { get; set; }
+
+    [Parameter]
+    public EventCallback<Rol> OnEdit { get; set; }
+
+    [Parameter]
+    public EventCallback<Rol> OnAdd { get; set; }
+
+    [Parameter]
+    public EventCallback<int> OnDelete { get; set; }
+
+    private Rol rolEditando;
+    private Rol nuevoRol;
+
+    private async void IniciarNuevoRol()
+    {
+        int nuevoId = Roles.Any() ? Roles.Max(r => r.Id) + 1 : 1;
+
+        nuevoRol = new Rol
+            {
+                Id = nuevoId
+            };
+
+        // Añadir el nuevo rol a la base de datos
+        if (OnAdd.HasDelegate)
+        {
+            await OnAdd.InvokeAsync(nuevoRol);
+        }
+
+        // Añadir temporalmente a la lista para mostrar en la tabla
+        Roles.Add(nuevoRol);
+        StateHasChanged(); // Forzar la actualización de la UI
+    }
+
+    private void CancelarNuevoRol()
+    {
+        Roles.Remove(nuevoRol);
+        nuevoRol = null;
+        StateHasChanged(); // Forzar la actualización de la UI
+    }
+
+    private async Task AgregarNuevoRol()
+    {
+        if (OnEdit.HasDelegate)
+        {
+            await OnEdit.InvokeAsync(nuevoRol);
+        }
+
+        nuevoRol = null;
+        StateHasChanged(); // Forzar la actualización de la UI
+    }
+
+    private void EditarRol(Rol rol)
+    {
+        rolEditando = new Rol
+            {
+                Id = rol.Id,
+                Nombre = rol.Nombre,
+                Descripcion = rol.Descripcion
+            };
+
+        StateHasChanged(); // Forzar la actualización de la UI
+    }
+
+    private void CancelarEdicion()
+    {
+        rolEditando = null;
+        StateHasChanged(); // Forzar la actualización de la UI
+    }
+
+    private async Task GuardarCambios()
+    {
+        if (OnEdit.HasDelegate)
+        {
+            await OnEdit.InvokeAsync(rolEditando);
+        }
+
+        rolEditando = null;
+        StateHasChanged(); // Forzar la actualización de la UI
+    }
+
+    private async Task EliminarRol(Rol rol)
+    {
+        if (OnDelete.HasDelegate)
+        {
+            await OnDelete.InvokeAsync(rol.Id);
+        }
+
+        Roles.Remove(rol);
+    }
+}

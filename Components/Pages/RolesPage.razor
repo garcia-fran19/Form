@@ -1,0 +1,58 @@
+﻿@page "/roles"
+@using Form.Data
+@using Form.Models
+@using Form.Shared
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext _context
+
+<div>
+    <RolComponent TItem="Rol" Roles="roles" OnEdit="ActualizarRol" OnAdd="AñadirRol" OnDelete="EliminarRol" />
+</div>
+
+@code {
+    private List<Rol> roles = new List<Rol>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        roles = await GetRolesAsync();
+    }
+
+    private async Task<List<Rol>> GetRolesAsync()
+    {
+        return await _context.Roles.ToListAsync(); 
+        // Este método carga la lista de roles desde la base de datos
+    }
+
+    private async Task ActualizarRol(Rol rolActualizado)
+    {
+        var rol = await _context.Roles.FindAsync(rolActualizado.Id);
+        if (rol != null)
+        {
+            rol.Nombre = rolActualizado.Nombre;
+            rol.Descripcion = rolActualizado.Descripcion;
+            await _context.SaveChangesAsync();
+        }
+
+        // Recargar la lista después de la actualización
+        roles = await GetRolesAsync();
+    }
+
+    private async Task AñadirRol(Rol nuevoRol)
+    {
+        _context.Roles.Add(nuevoRol);
+        await _context.SaveChangesAsync();
+    }
+
+    private async Task EliminarRol(int id)
+    {
+        var rol = await _context.Roles.FindAsync(id);
+        if (rol != null)
+        {
+            _context.Roles.Remove(rol);
+            await _context.SaveChangesAsync();
+        }
+
+        // Recargar la lista después de eliminar
+        roles = await GetRolesAsync();
+    }
+}
