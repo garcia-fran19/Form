@@ -1,0 +1,70 @@
+﻿
+@typeparam TRol
+@using MudBlazor
+@using Form.Models
+@using Form.Data
+@inject IDialogService DialogService
+@inject ApplicationDbContext _context
+
+<MudDialog>
+    <TitleContent>Asignar Permisos</TitleContent>
+    <DialogContent>
+        <MudTable Items="@PermisosDisponibles" Striped="true">
+            <HeaderContent>
+                <MudTh>Permiso</MudTh>
+                <MudTh>Asignar</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.Nombre</MudTd>
+                <MudTd>
+                    <MudCheckBox Checked="IsPermisoAsignado(context.Id)" OnChanged="OnPermisoChanged" T="bool" />
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Primary" OnClick="Guardar">Guardar</MudButton>
+        <MudButton OnClick="Cancelar">Cancelar</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    [Parameter] public Rol Rol { get; set; }
+    [Parameter] public List<Permiso> PermisosDisponibles { get; set; }
+
+    private List<int> selectedPermissions = new List<int>();
+
+
+    private void TogglePermiso(bool isChecked, int permisoId)
+    {
+        if (isChecked)
+        {
+            if (!Rol.RolPermisos.Any(rp => rp.PermisoId == permisoId))
+            {
+                Rol.RolPermisos.Add(new RolPermiso { RolId = Rol.Id, PermisoId = permisoId });
+            }
+        }
+        else
+        {
+            var rolPermiso = Rol.RolPermisos.FirstOrDefault(rp => rp.PermisoId == permisoId);
+            if (rolPermiso != null)
+            {
+                Rol.RolPermisos.Remove(rolPermiso);
+            }
+        }
+    }
+
+    private void OnPermisoChanged(bool isChecked, int permisoId)
+    {
+        TogglePermiso(isChecked, permisoId);
+    }
+
+    private bool IsPermisoAsignado(int permisoId)
+    {
+        return Rol.RolPermisos.Any(rp => rp.PermisoId == permisoId);
+    }
+
+    private void Guardar() => MudDialog.Close(DialogResult.Ok(selectedPermissions));
+    private void Cancelar() => MudDialog.Cancel();
+}

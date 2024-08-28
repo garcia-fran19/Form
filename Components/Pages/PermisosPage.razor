@@ -1,0 +1,118 @@
+﻿@page "/gestion-permisos"
+@using Form.Data
+@using Form.Models
+@using Form.Shared
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext _context
+
+<PermisosComponent 
+    Permisos="@permisos" 
+    Roles="@roles" 
+    OnAddPermiso="AñadirPermiso" 
+    OnEditPermiso="ActualizarPermiso" 
+    OnDeletePermiso="EliminarPermiso" 
+    OnAsignarPermisos="AsignarPermisosARol" 
+/>
+
+@code {
+    private List<Permiso> permisos = new List<Permiso>();
+    private List<Rol> roles = new List<Rol>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        permisos = await _context.Permisos.ToListAsync();
+        roles = await _context.Roles.Include(r => r.RolPermisos).ThenInclude(rp => rp.Permiso).ToListAsync();
+    }
+
+    private async Task AñadirPermiso(Permiso nuevoPermiso)
+    {
+        _context.Permisos.Add(nuevoPermiso);
+        await _context.SaveChangesAsync();
+
+        // Registrar el cambio
+        await RegistrarCambio("Crear", nuevoPermiso);
+
+        permisos = await _context.Permisos.ToListAsync();
+    }
+
+    private async Task ActualizarPermiso(Permiso permiso)
+    {
+        var permisoExistente = await _context.Permisos.FindAsync(permiso.Id);
+        if (permisoExistente != null)
+        {
+            permisoExistente.Nombre = permiso.Nombre;
+            permisoExistente.Descripcion = permiso.Descripcion;
+            await _context.SaveChangesAsync();
+            // Registrar el cambio
+            await RegistrarCambio("Actualizar", permisoExistente);
+        }
+
+       
+    }
+
+    private async Task EliminarPermiso(int id)
+    {
+        var permiso = await _context.Permisos.FindAsync(id);
+        if (permiso != null)
+        {
+            _context.Permisos.Remove(permiso);
+            await _context.SaveChangesAsync();
+            // Registrar el cambio
+            await RegistrarCambio("Eliminar", permiso);
+            permisos = await _context.Permisos.ToListAsync();
+        }
+
+
+    }
+
+    private async Task AsignarPermisosARol(Rol rol, List<int> permisosIds)
+    {
+        // Eliminar permisos que ya no están asignados
+        var permisosActuales = _context.RolPermisos.Where(rp => rp.RolId == rol.Id).ToList();
+        foreach (var permisoActual in permisosActuales)
+        {
+            if (!permisosIds.Contains(permisoActual.PermisoId))
+            {
+                _context.RolPermisos.Remove(permisoActual);
+            }
+        }
+
+        // Asignar nuevos permisos
+        foreach (var permisoId in permisosIds)
+        {
+            if (!permisosActuales.Any(rp => rp.PermisoId == permisoId))
+            {
+                _context.RolPermisos.Add(new RolPermiso { RolId = rol.Id, PermisoId = permisoId });
+            }
+        }
+
+        await _context.SaveChangesAsync();
+
+        // Registrar cambios de permisos para auditoría
+        foreach (var permisoId in permisosIds)
+        {
+            var permiso = await _context.Permisos.FindAsync(permisoId);
+            if (permiso != null)
+            {
+                await RegistrarCambio("Asignar Permiso", permiso);
+            }
+        }
+
+        roles = await _context.Roles.Include(r => r.RolPermisos).ThenInclude(rp => rp.Permiso).ToListAsync();
+    }
+
+    private async Task RegistrarCambio(string accion, Permiso permiso)
+    {
+        var auditoria = new PermisoAudit
+            {
+                Accion = accion,
+                PermisoId = permiso.Id,
+                NombrePermiso = permiso.Nombre,
+                FechaCambio = DateTime.UtcNow,
+                Usuario = "Admin" // Esto debería ser dinámico basado en el usuario autenticado
+            };
+        _context.PermisoAudits.Add(auditoria);
+        await _context.SaveChangesAsync();
+    }
+
+}

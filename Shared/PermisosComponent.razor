@@ -1,0 +1,116 @@
+﻿@typeparam TRol
+@using MudBlazor
+@using Form.Models
+
+<MudPaper Class="p-4">
+    <MudTabs>
+        <MudTabPanel Text="Permisos">
+            <MudText Typo="Typo.h6">Gestión de Permisos</MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CrearPermiso">Crear Nuevo Permiso</MudButton>
+
+            <MudTable Items="@Permisos" Striped="true">
+                <HeaderContent>
+                    <MudTh>Nombre</MudTh>
+                    <MudTh>Descripción</MudTh>
+                    <MudTh>Acciones</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.Nombre</MudTd>
+                    <MudTd>@context.Descripcion</MudTd>
+                    <MudTd>
+                        <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="() => EditarPermiso(context)">Editar</MudButton>
+                        <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="() => EliminarPermiso(context.Id)">Eliminar</MudButton>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudTabPanel>
+        <MudTabPanel Text="Roles">
+            <MudText Typo="Typo.h6">Asignar Permisos a Roles</MudText>
+            <MudTable Items="@Roles" Striped="true">
+                <HeaderContent>
+                    <MudTh>Rol</MudTh>
+                    <MudTh>Permisos</MudTh>
+                    <MudTh>Acciones</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.Nombre</MudTd>
+                    <MudTd>
+                        @foreach (var permiso in context.RolPermisos)
+                        {
+                            <MudChip  T="string">@RolPermiso.Permiso.Nombre</MudChip>
+                        }
+                    </MudTd>
+                    <MudTd>
+                        <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="() => MostrarDialogoAsignarPermisos(context)">Asignar Permisos</MudButton>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudTabPanel>
+    </MudTabs>
+</MudPaper>
+
+@code {
+    [Parameter]
+    public List<Permiso> Permisos { get; set; } = new List<Permiso>();
+
+    [Parameter]
+    public List<Rol> Roles { get; set; } = new List<Rol>();
+
+    [Parameter]
+    public EventCallback<Permiso> OnAddPermiso { get; set; }
+
+    [Parameter]
+    public EventCallback<Permiso> OnEditPermiso { get; set; }
+
+    [Parameter]
+    public EventCallback<int> OnDeletePermiso { get; set; }
+
+    [Parameter]
+    public EventCallback<Rol> OnAsignarPermisos { get; set; }
+
+    private void CrearPermiso()
+    {
+        Permisos.Add(new Permiso());
+        StateHasChanged(); // Actualiza la UI para mostrar el nuevo permiso en edición.
+    }
+
+    private async Task EditarPermiso(Permiso permiso)
+    {
+        if (OnEditPermiso.HasDelegate)
+        {
+            await OnEditPermiso.InvokeAsync(permiso);
+        }
+    }
+
+    private async Task EliminarPermiso(int id)
+    {
+        if (OnDeletePermiso.HasDelegate)
+        {
+            await OnDeletePermiso.InvokeAsync(id);
+        }
+    }
+
+    private async Task MostrarDialogoAsignarPermisos(Rol rol)
+    {
+        var dialogResult = await DialogService.Show<AsignarPermisosDialog>("Asignar Permisos", new DialogParameters
+        {
+            { "Rol", rol },
+            { "PermisosDisponibles", Permisos }
+        }).Result;
+
+        if (!dialogResult.Cancelled)
+        {
+            var selectedPermissions = (List<int>)dialogResult.Data;
+            await AsignarPermisos(rol, selectedPermissions);
+        }
+    }
+
+    private async Task AsignarPermisos(Rol rol, List<int> permisosIds)
+    {
+        if (OnAsignarPermisos.HasDelegate)
+        {
+            // Puedes pasar los ids de permisos seleccionados como parámetro si es necesario
+            await OnAsignarPermisos.InvokeAsync(rol);
+        }
+    }
+}
