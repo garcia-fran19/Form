@@ -26,12 +26,30 @@
                         <MudTh>Acciones</MudTh>
                     </HeaderContent>
                     <RowTemplate>
-                        <MudTd>@context.Nombre</MudTd>
-                        <MudTd>@context.Descripcion</MudTd>
-                        <MudTd>
-                            <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="() => EditarPermiso(context)">Editar</MudButton>
-                            <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="() => EliminarPermiso(context.Id)">Eliminar</MudButton>
-                        </MudTd>
+                        @if (permisoEditando != null && permisoEditando.Id == context.Id)
+                        {
+                            <!-- Modo Edición -->
+                            <MudTd>
+                                <MudTextField @bind-Value="permisoEditando.Nombre" Label="Nombre" />
+                            </MudTd>
+                            <MudTd>
+                                <MudTextField @bind-Value="permisoEditando.Descripcion" Label="Descripción" />
+                            </MudTd>
+                            <MudTd>
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="AceptarEdicion">Aceptar</MudButton>
+                                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="CancelarEdicion">Cancelar</MudButton>
+                            </MudTd>
+                        }
+                        else
+                        {
+                            <!-- Modo Normal -->
+                            <MudTd>@context.Nombre</MudTd>
+                            <MudTd>@context.Descripcion</MudTd>
+                            <MudTd>
+                                <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="() => EditarPermiso(context)">Editar</MudButton>
+                                <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="() => EliminarPermiso(context.Id)">Eliminar</MudButton>
+                            </MudTd>
+                        }
                     </RowTemplate>
                 </MudTable>
             }
@@ -82,6 +100,7 @@
 
     private bool enModoCreacion = false;
     private Permiso nuevoPermiso = new Permiso();
+    private Permiso permisoEditando;
 
     private void CrearPermiso()
     {
@@ -107,12 +126,39 @@
         StateHasChanged(); // Actualiza la UI
     }
 
-    private async Task EditarPermiso(Permiso permiso)
+    private void EditarPermiso(Permiso permiso)
+    {
+        permisoEditando = new Permiso
+            {
+                Id = permiso.Id,
+                Nombre = permiso.Nombre,
+                Descripcion = permiso.Descripcion
+            };
+        StateHasChanged(); // Forzar la actualización de la UI
+    }
+
+    private async Task AceptarEdicion()
     {
         if (OnEditPermiso.HasDelegate)
         {
-            await OnEditPermiso.InvokeAsync(permiso);
+            await OnEditPermiso.InvokeAsync(permisoEditando);
         }
+
+        var permisoExistente = Permisos.FirstOrDefault(p => p.Id == permisoEditando.Id);
+        if (permisoExistente != null)
+        {
+            permisoExistente.Nombre = permisoEditando.Nombre;
+            permisoExistente.Descripcion = permisoEditando.Descripcion;
+        }
+
+        permisoEditando = null;
+        StateHasChanged(); // Actualiza la UI
+    }
+
+    private void CancelarEdicion()
+    {
+        permisoEditando = null;
+        StateHasChanged(); // Actualiza la UI
     }
 
     private async Task EliminarPermiso(int id)
