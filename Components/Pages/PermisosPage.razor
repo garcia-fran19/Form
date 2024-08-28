@@ -6,13 +6,13 @@
 @inject ApplicationDbContext _context
 
 <PermisosComponent 
+    TRol="Rol"
     Permisos="@permisos" 
     Roles="@roles" 
     OnAddPermiso="AñadirPermiso" 
     OnEditPermiso="ActualizarPermiso" 
-    OnDeletePermiso="EliminarPermiso" 
-    OnAsignarPermisos="AsignarPermisosARol" 
-/>
+    OnDeletePermiso="EliminarPermiso"
+    OnAsignarPermisos="@(async args => await AsignarPermisosARol(args.Item1, args.Item2))" />
 
 @code {
     private List<Permiso> permisos = new List<Permiso>();

@@ -1,0 +1,23 @@
+# Ignorar configuraciones específicas de Visual Studio
+.vs/
+
+
+# Ignorar carpetas de construcción (build)
+bin/
+obj/
+
+# Ignorar archivos de depuración y construcción
+*.cache
+*.log
+*.pdb
+*.obj
+*.exe
+*.dll
+*.manifest
+*.vspscc
+*.vssscc
+
+# Ignorar configuraciones de proyecto que no deben ser compartidas
+*.csproj.user
+*.csproj.nuget.g.props
+*.csproj.nuget.g.targets

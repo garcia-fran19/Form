@@ -1,6 +1,7 @@
 ﻿@typeparam TRol
 @using MudBlazor
 @using Form.Models
+@inject IDialogService DialogService
 
 <MudPaper Class="p-4">
     <MudTabs>
@@ -37,7 +38,7 @@
                     <MudTd>
                         @foreach (var permiso in context.RolPermisos)
                         {
-                            <MudChip  T="string">@RolPermiso.Permiso.Nombre</MudChip>
+                            <MudChip  T="string">@permiso.Permiso.Nombre</MudChip>
                         }
                     </MudTd>
                     <MudTd>
@@ -66,7 +67,7 @@
     public EventCallback<int> OnDeletePermiso { get; set; }
 
     [Parameter]
-    public EventCallback<Rol> OnAsignarPermisos { get; set; }
+    public EventCallback<(Rol, List<int>)> OnAsignarPermisos { get; set; }
 
     private void CrearPermiso()
     {
@@ -92,13 +93,13 @@
 
     private async Task MostrarDialogoAsignarPermisos(Rol rol)
     {
-        var dialogResult = await DialogService.Show<AsignarPermisosDialog>("Asignar Permisos", new DialogParameters
+        var dialogResult = await DialogService.Show<PermisosDialog<Rol>>("Asignar Permisos", new DialogParameters
         {
             { "Rol", rol },
             { "PermisosDisponibles", Permisos }
         }).Result;
 
-        if (!dialogResult.Cancelled)
+        if (!dialogResult.Canceled)
         {
             var selectedPermissions = (List<int>)dialogResult.Data;
             await AsignarPermisos(rol, selectedPermissions);
@@ -110,7 +111,7 @@
         if (OnAsignarPermisos.HasDelegate)
         {
             // Puedes pasar los ids de permisos seleccionados como parámetro si es necesario
-            await OnAsignarPermisos.InvokeAsync(rol);
+            await OnAsignarPermisos.InvokeAsync((rol, permisosIds));
         }
     }
 }
