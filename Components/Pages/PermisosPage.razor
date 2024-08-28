@@ -20,7 +20,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        permisos = await _context.Permisos.ToListAsync();
+        permisos = await _context.Permisos.Where(p => p.IsActive).ToListAsync();
         roles = await _context.Roles.Include(r => r.RolPermisos).ThenInclude(rp => rp.Permiso).ToListAsync();
     }
 
@@ -55,11 +55,11 @@
         var permiso = await _context.Permisos.FindAsync(id);
         if (permiso != null)
         {
-            _context.Permisos.Remove(permiso);
+            permiso.IsActive = false;
             await _context.SaveChangesAsync();
             // Registrar el cambio
-            await RegistrarCambio("Eliminar", permiso);
-            permisos = await _context.Permisos.ToListAsync();
+            await RegistrarCambio("Desactivar", permiso);
+            permisos = await _context.Permisos.Where(p => p.IsActive).ToListAsync();
         }
 
 

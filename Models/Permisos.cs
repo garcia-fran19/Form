@@ -8,6 +8,8 @@ namespace Form.Models
         public int Id { get; set; }
         public string Nombre { get; set; }
         public string Descripcion { get; set; }
+        public bool IsActive { get; set; } = true;  // Campo para marcar el permiso como activo o inactivo
+
     }
 
     [Table("rolpermiso")]
